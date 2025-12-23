@@ -532,7 +532,7 @@ This project is open-source and available for educational purposes.
 
 ## 👨‍💻 Author
 
-Built with ❤️ using Huffman Coding
+Built with ❤️ using Huffman Coding by Krishna Satyam
 
 ---
 

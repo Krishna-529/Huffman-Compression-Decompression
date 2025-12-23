@@ -64,95 +64,57 @@ First, the code counts character occurrences:
 - `d`: 3
 - `c`: 1
 
-**Step 2: Sorting & Initialization**
-The code creates a `vector<char>` alphabet and sorts it alphabetically: `['a', 'b', 'c', 'd']`.
-It then creates Leaf Nodes and assigns them a **Priority Index** based on this sorted order.
+**Step 2: Priority Assignment (The "Secret Sauce")**
+Unlike standard Huffman which might just sort by frequency, your code assigns a **Priority Index** based on the order they are extracted from the initial sorted queue.
+1. Sort by Frequency (Ascending), then ASCII (Ascending).
+2. Extract and assign index.
 
-| Character | Frequency | Priority Index | Height |
-|-----------|-----------|----------------|--------|
-| 'a'       | 5         | 0              | 0      |
-| 'b'       | 2         | 1              | 0      |
-| 'c'       | 1         | 2              | 0      |
-| 'd'       | 3         | 3              | 0      |
+| Order | Character | Frequency | Assigned Priority |
+|-------|-----------|-----------|-------------------|
+| 1     | 'c'       | 1         | 0                 |
+| 2     | 'b'       | 2         | 1                 |
+| 3     | 'd'       | 3         | 2                 |
+| 4     | 'a'       | 5         | 3                 |
 
 **Step 3: The Priority Queue (Min-Heap)**
-The `Comp` struct defines the sorting rules for the queue. This is the most critical part of the logic.
-
-**The Hierarchy of "Who is Smaller?" (Who floats to the top?):**
-1. **Lowest Frequency** (Standard Huffman rule).
-2. **Lowest Height** (Tie-breaker 1: Prefer shallower sub-trees).
-3. **Lowest Priority Index** (Tie-breaker 2: Prefer characters that appeared earlier in the alphabet).
-4. **Lowest ASCII Value** (Final tie-breaker).
-
-**Initial Queue State** (Sorted by rules above):
-1. `c` (Freq: 1, H: 0, Pri: 2) **[TOP]**
-2. `b` (Freq: 2, H: 0, Pri: 1)
-3. `d` (Freq: 3, H: 0, Pri: 3)
-4. `a` (Freq: 5, H: 0, Pri: 0)
+The queue is initialized with these nodes. The `Comp` struct rules determine who floats to the top (is processed first):
+1. **Lowest Frequency**
+2. **Lowest Height** (Tie-breaker 1)
+3. **Lowest Priority Index** (Tie-breaker 2)
 
 ### 2. **Building the Tree (Iteration by Iteration)**
 
-The loop runs until only one node remains.
-
 **Iteration 1**
-- **Pop A (Top)**: Node `c` (Freq 1)
-- **Pop B (Next)**: Node `b` (Freq 2)
+- **Pop A**: Node `c` (Freq 1, Pri 0)
+- **Pop B**: Node `b` (Freq 2, Pri 1)
 - **Create Parent (P1)**:
-  - Frequency: $1 + 2 = 3$
-  - Height: $\max(0, 0) + 1 = 1$
-  - Priority: $\min(\text{Pri}_c, \text{Pri}_b) = \min(2, 1) = 1$
-- **Left/Right Logic**:
-  - The code checks: `if (a->priority < b->priority)`
-  - `c` (Pri 2) < `b` (Pri 1) is **FALSE**.
-  - **Result**: `b` becomes **Left**, `c` becomes **Right**.
-  - *(Note: This keeps the node with the 'earlier' alphabet index on the left).*
-- **Push P1**: `P1` (Freq 3, H 1, Pri 1) enters the queue.
+  - Freq: $1+2=3$. Height: 1. Priority: $\min(0, 1) = 0$.
+- **Left/Right Logic**: `if (a->priority < b->priority)`
+  - `c` (0) < `b` (1) is **TRUE**.
+  - **Result**: `c` is **Left**, `b` is **Right**.
+- **Push P1**: (Freq 3, H 1, Pri 0).
 
 **Iteration 2: The Conflict (Freq 3 vs Freq 3)**
-The queue now contains:
-1. `P1` (Freq: 3, Height: 1, Pri: 1)
-2. `d` (Freq: 3, Height: 0, Pri: 3)
-3. `a` (Freq: 5, Height: 0, Pri: 0)
-
-**CONFLICT RESOLUTION**:
-Both `P1` and `d` have Frequency 3.
-The comparator `Comp` checks: `if(l->height != r->height) return l->height > r->height;`
-This logic favors **Lower Height**.
-- `d` has Height 0.
-- `P1` has Height 1.
-- **Winner**: `d` is considered "smaller/better" and moves to the top.
-
-**Queue Order before processing**:
-1. `d` (Freq 3) **[TOP]**
-2. `P1` (Freq 3)
-3. `a` (Freq 5)
-
-**Processing**:
+Queue contains: `d` (Freq 3, H 0, Pri 2) and `P1` (Freq 3, H 1, Pri 0).
+- **Comparison**: Frequencies equal. Heights differ.
+- `d` (Height 0) is "smaller" than `P1` (Height 1).
 - **Pop A**: Node `d` (Freq 3)
 - **Pop B**: Node `P1` (Freq 3)
 - **Create Parent (P2)**:
-  - Frequency: $3 + 3 = 6$
-  - Height: $\max(0, 1) + 1 = 2$
-  - Priority: $\min(3, 1) = 1$
+  - Freq: $3+3=6$. Height: 2. Priority: $\min(2, 0) = 0$.
 - **Left/Right Logic**:
-  - `d` (Pri 3) < `P1` (Pri 1) is **FALSE**.
-  - **Result**: `P1` becomes **Left**, `d` becomes **Right**.
+  - `d` (Pri 2) < `P1` (Pri 0) is **FALSE**.
+  - **Result**: `P1` is **Left**, `d` is **Right**.
 
 **Iteration 3 (Final Merge)**
-The queue now contains:
-1. `a` (Freq: 5, H: 0, Pri: 0)
-2. `P2` (Freq: 6, H: 2, Pri: 1)
-
-**Processing**:
+Queue contains: `a` (Freq 5, H 0, Pri 3) and `P2` (Freq 6, H 2, Pri 0).
 - **Pop A**: Node `a` (Freq 5)
 - **Pop B**: Node `P2` (Freq 6)
 - **Create Root**:
-  - Frequency: $5 + 6 = 11$
-  - Height: $\max(0, 2) + 1 = 3$
-  - Priority: 0
+  - Freq: 11. Height 3. Priority 0.
 - **Left/Right Logic**:
-  - `a` (Pri 0) < `P2` (Pri 1) is **TRUE**.
-  - **Result**: `a` becomes **Left**, `P2` becomes **Right**.
+  - `a` (Pri 3) < `P2` (Pri 0) is **FALSE**.
+  - **Result**: `P2` is **Left**, `a` is **Right**.
 
 ### 3. **Final Tree Structure & Conflict Logic Summary**
 
@@ -160,19 +122,19 @@ The queue now contains:
 ```
        [ROOT (11)]
        /        \
-     'a'      [P2 (6)]
-     (0)      /      \
-          [P1 (3)]    'd'
-          /      \    (1)
-        'b'      'c'
-        (0)      (1)
+    [P2 (6)]    'a'
+    /      \    (1)
+ [P1 (3)]  'd'
+ /      \  (01)
+'c'    'b'
+(000)  (001)
 ```
 
 **Bit Assignment** (Left = 0, Right = 1):
-- `a`: Left → **0** (Length: 1 bit)
-- `b`: Right → Left → Left → **100** (Length: 3 bits)
-- `c`: Right → Left → Right → **101** (Length: 3 bits)
-- `d`: Right → Right → **11** (Length: 2 bits)
+- `c`: Left → Left → Left → **000** (Length: 3)
+- `b`: Left → Left → Right → **001** (Length: 3)
+- `d`: Left → Right → **01** (Length: 2)
+- `a`: Right → **1** (Length: 1)
 
 **Why This Logic Matters?**
 The specific lines in the code that handle the "Freq 3 vs Freq 3" conflict are:
@@ -183,8 +145,8 @@ if(l->height != r->height) return l->height > r->height;
 if(l->priority != r->priority) return l->priority > r->priority;
 ```
 
-1.  **Why Height?** By picking the shorter node (`d`) over the taller node (`P1`) when frequencies match, we prevent the tree from becoming too deep (unbalanced). This optimizes the worst-case bit length.
-2.  **Why Priority?** By using the priority index (derived from alphabetical order), we ensure that if everything else is equal, `a` will always be processed before `b`. This makes the compression **Deterministic**—running the program 100 times on the same file will produce the exact same binary output every time.
+1.  **Why Height?** By picking the shorter node (`d`) over the taller node (`P1`), we keep the tree balanced.
+2.  **Why Priority?** The priority index ensures deterministic ordering. In the final step, `a` (Pri 3) went to the Right because it had a higher priority index than the subtree `P2` (Pri 0), resulting in a specific, reproducible tree structure.
 
 ### 4. **Code Generation via Tree Traversal**
 ```cpp
@@ -280,18 +242,18 @@ This is the most complex part of your code. The file contains **Lengths**, not C
 
 | Step | Char | Length | Math Logic (`curr_code` operations) | Binary Code |
 | --- | --- | --- | --- | --- |
-| **1** | **'a'** | 1 | `first` is true. Start at 0. | **0** |
-| **2** | **'b'** | 3 | 1. Increment `curr_code`: <br><br>2. `len` (3) > `prev` (1).<br><br>3. Shift Left: `1 << (3-1)`  `1 << 2` = **4** | **100** |
-| **3** | **'c'** | 3 | 1. Increment `curr_code`: <br><br>2. `len` (3) == `prev` (3). No Shift. | **101** |
-| **4** | **'d'** | 2 | 1. Increment `curr_code`:  (`110`)<br><br>2. `len` (2) < `prev` (3).<br><br>3. Shift Right: `6 >> (3-2)`  `6 >> 1` = **3** | **11** |
+| **1** | **'c'** | 3 | `first` is true. Start at 0. | **000** |
+| **2** | **'b'** | 3 | 1. Increment `curr_code`: <br><br>2. `len` (3) == `prev` (3). No Shift. | **001** |
+| **3** | **'d'** | 2 | 1. Increment `curr_code`: (`010`)<br><br>2. `len` (2) < `prev` (3).<br><br>3. Shift Right: `2 >> (3-2)`  `2 >> 1` = **1** | **01** |
+| **4** | **'a'** | 1 | 1. Increment `curr_code`: (`10`)<br><br>2. `len` (1) < `prev` (2).<br><br>3. Shift Right: `2 >> (2-1)`  `2 >> 1` = **1** | **1** |
 
 **Result:**
 The decompressor has successfully recovered the exact codes used by the compressor:
 
-* **a:** `0`
-* **b:** `100`
-* **c:** `101`
-* **d:** `11`
+* **c:** `000`
+* **b:** `001`
+* **d:** `01`
+* **a:** `1`
 
 ---
 
@@ -299,41 +261,41 @@ The decompressor has successfully recovered the exact codes used by the compress
 
 Now, the function `insertPath` runs for each of these codes to build the tree in RAM.
 
-1. **Insert 'a' (Code `0`)**
+1. **Insert 'c' (Code `000`)**
    * Start at Root.
    * Bit `0`: Go Left.
-   * **Action:** Create Node. Mark it as 'a'.
-
-2. **Insert 'b' (Code `100`)**
-   * Start at Root.
-   * Bit `1`: Go Right.
    * Bit `0`: Go Left.
    * Bit `0`: Go Left.
-   * **Action:** Create Node. Mark it as 'b'.
-
-3. **Insert 'c' (Code `101`)**
-   * Start at Root.
-   * Bit `1`: Go Right.
-   * Bit `0`: Go Left.
-   * Bit `1`: Go Right.
    * **Action:** Create Node. Mark it as 'c'.
 
-4. **Insert 'd' (Code `11`)**
+2. **Insert 'b' (Code `001`)**
    * Start at Root.
+   * Bit `0`: Go Left.
+   * Bit `0`: Go Left.
    * Bit `1`: Go Right.
+   * **Action:** Create Node. Mark it as 'b'.
+
+3. **Insert 'd' (Code `01`)**
+   * Start at Root.
+   * Bit `0`: Go Left.
    * Bit `1`: Go Right.
    * **Action:** Create Node. Mark it as 'd'.
+
+4. **Insert 'a' (Code `1`)**
+   * Start at Root.
+   * Bit `1`: Go Right.
+   * **Action:** Create Node. Mark it as 'a'.
 
 **Visualizing the Reconstructed Tree:**
 
 ```text
        [ROOT]
        /    \
-     'a'   (Right)
-            /   \
-        (Left)  'd'
-        /    \
-      'b'    'c'
+    (Left)  'a'
+    /    \
+ (Left)  'd'
+ /    \
+'c'   'b'
 ```
 
 ---
@@ -342,31 +304,18 @@ Now, the function `insertPath` runs for each of these codes to build the tree in
 
 Now the decompressor reads the **Body Bytes** one by one and walks the tree.
 
-**Byte 1:** `01001101`
+**Byte 1:** `10010100` (Example bitstream for "abd...")
 
 | Current Bit | Action | Current Node State | Output |
 | --- | --- | --- | --- |
-| **0** | Go Left | Leaf Found ('a')! Reset to Root. | **"a"** |
-| **1** | Go Right | Internal Node. |  |
+| **1** | Go Right | Leaf Found ('a')! Reset to Root. | **"a"** |
 | **0** | Go Left | Internal Node. |  |
-| **0** | Go Left | Leaf Found ('b')! Reset to Root. | **"b"** |
-| **1** | Go Right | Internal Node. |  |
+| **0** | Go Left | Internal Node. |  |
+| **1** | Go Right | Leaf Found ('b')! Reset to Root. | **"b"** |
+| **0** | Go Left | Internal Node. |  |
 | **1** | Go Right | Leaf Found ('d')! Reset to Root. | **"d"** |
-| **0** | Go Left | Leaf Found ('a')! Reset to Root. | **"a"** |
-| **1** | Go Right | Internal Node. |  |
-
-**Byte 2:** `01011100` (Continuing from previous state)
-
-| Current Bit | Action | Current Node State | Output |
-| --- | --- | --- | --- |
+| **1** | Go Right | Leaf Found ('a')! Reset to Root. | **"a"** |
 | **0** | Go Left | Internal Node. |  |
-| **1** | Go Right | Leaf Found ('c')! Reset to Root. | **"c"** |
-| **0** | Go Left | Leaf Found ('a')! Reset to Root. | **"a"** |
-| **1** | Go Right | Internal Node. |  |
-| **1** | Go Right | Leaf Found ('d')! Reset to Root. | **"d"** |
-| **1** | Go Right | Internal Node. |  |
-| **0** | Go Left | Internal Node. |  |
-| **0** | Go Left | Leaf Found ('b')! Reset to Root. | **"b"** |
 
 *(...and so on until `textLength` of 11 is reached)*
 
